@@ -268,6 +268,32 @@ COMMAND_HANDLER(interface_handle_trace_command)
 	return ERROR_OK;
 }
 
+static int jim_idcode(Jim_Interp *interp, int argc, Jim_Obj *const *argv)
+{
+	/* NOTE: should be called after hl_transport_init()
+	 *                                --> hl_interface_init_target() */
+	int r;
+	unsigned int idcode;
+	struct command_context *cmd_ctx = current_command_context(interp);
+	struct target *t = get_current_target(cmd_ctx);
+
+	if (t->tap->hasidcode) {
+		idcode = t->tap->idcode;
+		r = JIM_OK;
+	} else {
+		int r0 = hl_if.layout->api->idcode(hl_if.handle, &idcode);
+		if (r0 == ERROR_OK) {
+			r = JIM_OK;
+		} else {
+			r = JIM_ERR;
+		}
+	}
+
+	if (r == JIM_OK)
+		command_print_sameline(NULL, "0x%08x ", idcode);
+	return r;
+}
+
 static const struct command_registration hl_interface_command_handlers[] = {
 	{
 	 .name = "hla_device_desc",
@@ -303,6 +329,12 @@ static const struct command_registration hl_interface_command_handlers[] = {
 	 .mode = COMMAND_CONFIG,
 	 .help = "configure trace reception",
 	 .usage = "source_lock_hz [destination_path]",
+	 },
+	 {
+	 .name = "hla_idcode",
+	 .jim_handler = &jim_idcode,
+	 .mode = COMMAND_ANY,
+	 .help = "read idcode",
 	 },
 	COMMAND_REGISTRATION_DONE
 };
