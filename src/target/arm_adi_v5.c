@@ -1546,8 +1546,6 @@ COMMAND_HANDLER(dap_apcsw_command)
 	return 0;
 }
 
-
-
 COMMAND_HANDLER(dap_apid_command)
 {
 	struct target *target = get_current_target(CMD_CTX);
@@ -1611,6 +1609,21 @@ COMMAND_HANDLER(dap_ti_be_32_quirks_command)
 	return 0;
 }
 
+static int dap_idcode_command(Jim_Interp *interp, int argc, Jim_Obj *const *argv)
+{
+	int r;
+	unsigned int idcode;
+	struct command_context *cmd_ctx = current_command_context(interp);
+	struct target *t = get_current_target(cmd_ctx);
+	struct arm *arm = target_to_arm(t);
+	struct adiv5_dap *dap = arm->dap;
+
+	r = dap_queue_dp_read(dap, DP_IDCODE, &idcode);
+	if (r == ERROR_OK)
+		command_print_sameline(NULL, "0x%08x ", idcode);
+	return r;
+}
+
 static const struct command_registration dap_commands[] = {
 	{
 		.name = "info",
@@ -1635,7 +1648,6 @@ static const struct command_registration dap_commands[] = {
 		.help = "Set csw access bit ",
 		.usage = "[sprot]",
 	},
-
 	{
 		.name = "apid",
 		.handler = dap_apid_command,
@@ -1666,6 +1678,11 @@ static const struct command_registration dap_commands[] = {
 		.mode = COMMAND_CONFIG,
 		.help = "set/get quirks mode for TI TMS450/TMS570 processors",
 		.usage = "[enable]",
+	},
+	{
+		.name = "idcode",
+		.jim_handler = dap_idcode_command,
+		.help = "Read DAP idcode",
 	},
 	COMMAND_REGISTRATION_DONE
 };
