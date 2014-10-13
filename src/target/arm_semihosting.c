@@ -105,6 +105,8 @@ static int do_semihosting(struct target *target)
 					 * otherwise it will fail to reopen a previously
 					 * written file */
 					result = open((char *)fn, open_modeflags[m], 0644);
+					if (result < 0)
+						LOG_WARNING("arm_semihosting_open(\"%s\") failed", fn);
 				}
 				arm->semihosting_errno =  errno;
 			} else {
