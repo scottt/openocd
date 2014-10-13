@@ -1620,7 +1620,7 @@ static int dap_idcode_command(Jim_Interp *interp, int argc, Jim_Obj *const *argv
 
 	r = dap_queue_dp_read(dap, DP_IDCODE, &idcode);
 	if (r == ERROR_OK)
-		command_print_sameline(NULL, "0x%08x ", idcode);
+		command_print(cmd_ctx, "0x%08x ", idcode);
 	return r;
 }
 
