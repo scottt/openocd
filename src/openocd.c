@@ -110,6 +110,18 @@ COMMAND_HANDLER(handle_noinit_command)
 	return ERROR_OK;
 }
 
+static int initialized;
+
+/* Allow cilents using "noinit" to detect whether initialized has happened or not */
+static int jim_initialized_command(Jim_Interp *interp, int argc,
+	Jim_Obj * const *argv)
+{
+	if (argc > 1)
+		return JIM_ERR;
+	Jim_SetResultInt(interp, initialized);
+	return JIM_OK;
+}
+
 /* OpenOCD can't really handle failure of this command. Patches welcome! :-) */
 COMMAND_HANDLER(handle_init_command)
 {
@@ -118,7 +130,6 @@ COMMAND_HANDLER(handle_init_command)
 		return ERROR_COMMAND_SYNTAX_ERROR;
 
 	int retval;
-	static int initialized;
 	if (initialized)
 		return ERROR_OK;
 
@@ -206,6 +217,14 @@ static const struct command_registration openocd_command_handlers[] = {
 			"Changes command mode from CONFIG to EXEC.  "
 			"Unless 'noinit' is called, this command is "
 			"called automatically at the end of startup.",
+		.usage = ""
+	},
+	{
+		.name = "initialized",
+		.jim_handler = &jim_initialized_command,
+		.mode = COMMAND_ANY,
+		.help = "Allow clients that use \"noinit\" to detect"
+			"whether init has happed.",
 		.usage = ""
 	},
 	{
