@@ -280,8 +280,12 @@ static int jim_idcode(Jim_Interp *interp, int argc, Jim_Obj *const *argv)
 	if (t->tap->hasidcode) {
 		idcode = t->tap->idcode;
 		r = JIM_OK;
+	} else if (hl_if.handle == NULL) {
+		r = JIM_ERR;
 	} else {
-		int r0 = hl_if.layout->api->idcode(hl_if.handle, &idcode);
+		int r0;
+		assert(hl_if.layout);
+		r0 = hl_if.layout->api->idcode(hl_if.handle, &idcode);
 		if (r0 == ERROR_OK) {
 			r = JIM_OK;
 		} else {
@@ -293,6 +297,56 @@ static int jim_idcode(Jim_Interp *interp, int argc, Jim_Obj *const *argv)
 		command_print(cmd_ctx, "0x%08x ", idcode);
 	return r;
 }
+
+static int jim_target_voltage(Jim_Interp *interp, int argc, Jim_Obj *const *argv)
+{
+	int r;
+	struct hl_layout_api_s *hla_api;
+	float voltage;
+
+	/* NOTE: should be called after hl_transport_init() */
+	assert(hl_if.handle);
+	assert(hl_if.layout);
+	hla_api = hl_if.layout->api;
+
+	if (!hla_api->target_voltage) {
+		LOG_INFO("hla adapter doesn't support reading target voltage");
+		return JIM_ERR;
+	}
+
+	r = hla_api->target_voltage(hl_if.handle, &voltage);
+	if (r != ERROR_OK)
+		return JIM_ERR;
+
+	Jim_SetResult(interp, Jim_NewDoubleObj(interp, voltage));
+	return JIM_OK;
+}
+
+static int jim_firmware_version(Jim_Interp *interp, int argc, Jim_Obj *const *argv)
+{
+	int r;
+	struct hl_layout_api_s *hla_api;
+	char firmware_version[256];
+
+	/* NOTE: should be called after hl_transport_init() */
+	assert(hl_if.handle);
+	assert(hl_if.layout);
+	hla_api = hl_if.layout->api;
+
+	if (!hla_api->firmware_version) {
+		LOG_INFO("hla adapter doesn't support reading firmware version");
+		return JIM_ERR;
+	}
+
+	r = hla_api->firmware_version(hl_if.handle, firmware_version, sizeof(firmware_version));
+	if (r != ERROR_OK)
+		return JIM_ERR;
+
+	Jim_SetResultString(interp, firmware_version, strlen(firmware_version));
+	return JIM_OK;
+}
+
+
 
 static const struct command_registration hl_interface_command_handlers[] = {
 	{
@@ -335,6 +389,18 @@ static const struct command_registration hl_interface_command_handlers[] = {
 	 .jim_handler = &jim_idcode,
 	 .mode = COMMAND_ANY,
 	 .help = "read idcode",
+	 },
+	 {
+	 .name = "hla_target_voltage",
+	 .jim_handler = &jim_target_voltage,
+	 .mode = COMMAND_ANY,
+	 .help = "read target voltage. Useful in detecting connection problems",
+	 },
+	 {
+	 .name = "hla_firmware_version",
+	 .jim_handler = &jim_firmware_version,
+	 .mode = COMMAND_ANY,
+	 .help = "read debug adapter firmware version",
 	 },
 	COMMAND_REGISTRATION_DONE
 };

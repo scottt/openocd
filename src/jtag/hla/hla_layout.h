@@ -77,6 +77,10 @@ struct hl_layout_api_s {
 	int (*override_target) (const char *targetname);
 	/** */
 	enum target_state (*state) (void *fd);
+	/** */
+	int (*target_voltage) (void *handle, float *voltage);
+	/** */
+	int (*firmware_version) (void *handle, char *firmware_version, int firmware_version_len_max);
 };
 
 /** */

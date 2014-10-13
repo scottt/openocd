@@ -1568,6 +1568,31 @@ static int stlink_usb_override_target(const char *targetname)
 }
 
 /** */
+static int stlink_usb_firmware_version(void *handle, char *firmware_version, int firmware_version_len_max)
+{
+	struct stlink_usb_handle_s *h = handle;
+	struct stlink_usb_version *v;
+	char swim_or_mass_storage;
+	int n;
+
+	assert(handle != NULL);
+
+	v = &(h->version);
+	if (v->swim > 4)
+		swim_or_mass_storage = 'M';
+	else
+		swim_or_mass_storage = 'S';
+
+	n = snprintf(firmware_version, firmware_version_len_max, "V%d.J%d.%c%d",
+			v->stlink, v->jtag, swim_or_mass_storage, v->swim);
+
+	if (firmware_version_len_max >= (n + 1))
+		return ERROR_OK;
+	else
+		return ERROR_BUF_TOO_SMALL;
+}
+
+/** */
 static int stlink_usb_close(void *fd)
 {
 	struct stlink_usb_handle_s *h = fd;
@@ -1800,4 +1825,8 @@ struct hl_layout_api_s stlink_usb_layout_api = {
 	.write_debug_reg = stlink_usb_write_debug_reg,
 	/** */
 	.override_target = stlink_usb_override_target,
+	/** */
+	.target_voltage = stlink_usb_check_voltage,
+	/** */
+	.firmware_version = stlink_usb_firmware_version,
 };
