@@ -290,7 +290,7 @@ static int jim_idcode(Jim_Interp *interp, int argc, Jim_Obj *const *argv)
 	}
 
 	if (r == JIM_OK)
-		command_print_sameline(NULL, "0x%08x ", idcode);
+		command_print(cmd_ctx, "0x%08x ", idcode);
 	return r;
 }
 
