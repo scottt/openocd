@@ -21,6 +21,8 @@
  *   51 Franklin Street, Fifth Floor, Boston, MA 02110-1301 USA.           *
  ***************************************************************************/
 
+#include <assert.h>
+
 #ifdef HAVE_CONFIG_H
 #include "config.h"
 #endif
@@ -278,8 +280,16 @@ static void cmsis_dap_usb_close(struct cmsis_dap *dap)
 /* Send a message and receive the reply */
 static int cmsis_dap_usb_xfer(struct cmsis_dap *dap, int txlen)
 {
+	int i;
+	char t[16*5];
+
 	/* Pad the rest of the TX buffer with 0's */
 	memset(dap->packet_buffer + txlen, 0, dap->packet_size - 1 - txlen);
+
+	for (i=0; i<dap->packet_size; i++) {
+		snprintf(t + i*5, sizeof(t), "%3d, ", dap->packet_buffer[i]);
+	}
+	LOG_DEBUG("sent: [ %s ]", t);
 
 	/* write data to device */
 	int retval = hid_write(dap->dev_handle, dap->packet_buffer, dap->packet_size);
@@ -635,8 +645,10 @@ static int cmsis_dap_reset_link(void)
 	buffer[9] = 0xff;
 	int retval = cmsis_dap_usb_xfer(cmsis_dap_handle, 10);
 
-	if (retval != ERROR_OK || buffer[1] != DAP_OK)
+	if (retval != ERROR_OK || buffer[1] != DAP_OK) {
+		LOG_DEBUG("%s CMD_DAP_SWJ_SEQ SWDIO high >50 cycles failed", __func__);
 		return ERROR_FAIL;
+	}
 
 	/* 16bit JTAG-SWD sequence */
 	buffer[0] = 0;	/* report number */
@@ -646,8 +658,10 @@ static int cmsis_dap_reset_link(void)
 	buffer[4] = 0xe7;
 	retval = cmsis_dap_usb_xfer(cmsis_dap_handle, 5);
 
-	if (retval != ERROR_OK || buffer[1] != DAP_OK)
+	if (retval != ERROR_OK || buffer[1] != DAP_OK) {
+		LOG_DEBUG("%s CMD_DAP_SWJ_SEQ 9e e7 failed", __func__);
 		return ERROR_FAIL;
+	}
 
 	/* another reset just incase */
 	buffer[0] = 0;	/* report number */
@@ -662,8 +676,10 @@ static int cmsis_dap_reset_link(void)
 	buffer[9] = 0xff;
 	retval = cmsis_dap_usb_xfer(cmsis_dap_handle, 10);
 
-	if (retval != ERROR_OK || buffer[1] != DAP_OK)
+	if (retval != ERROR_OK || buffer[1] != DAP_OK) {
+		LOG_DEBUG("%s CMD_DAP_SWJ_SEQ SWDIO 2nd high >50 cycles failed", __func__);
 		return ERROR_FAIL;
+	}
 
 	/* 16 cycle idle period */
 	buffer[0] = 0;	/* report number */
@@ -673,8 +689,10 @@ static int cmsis_dap_reset_link(void)
 	buffer[4] = 0x00;
 	retval = cmsis_dap_usb_xfer(cmsis_dap_handle, 5);
 
-	if (retval != ERROR_OK || buffer[1] != DAP_OK)
+	if (retval != ERROR_OK || buffer[1] != DAP_OK) {
+		LOG_DEBUG("%s CMD_DAP_SWJ_SEQ SWDIO 00 00 failed", __func__);
 		return ERROR_FAIL;
+	}
 
 	DEBUG_IO("DAP Read IDCODE");
 
@@ -686,10 +704,12 @@ static int cmsis_dap_reset_link(void)
 	buffer[4] = 0x02;
 	retval = cmsis_dap_usb_xfer(cmsis_dap_handle, 5);
 
-	if (retval != ERROR_OK)
+	if (retval != ERROR_OK) {
+		LOG_DEBUG("%s CMD_DAP_TFER failed", __func__);
 		return retval;
+	}
 
-	if (buffer[1] == 0) {
+	if (0 && buffer[1] == 0) {
 		LOG_DEBUG("Result 0x%02" PRIx8 " 0x%02" PRIx8, buffer[1], buffer[2]);
 
 		LOG_DEBUG("DAP Reset Target");
@@ -709,7 +729,7 @@ static int cmsis_dap_reset_link(void)
 		retval = cmsis_dap_usb_xfer(cmsis_dap_handle, 7);
 		LOG_DEBUG("Result 0x%02" PRIx8, buffer[1]);
 
-		return 0x80 + buffer[1];
+		return + buffer[1];
 	}
 
 	LOG_DEBUG("DAP Write Abort");
@@ -864,9 +884,11 @@ static int cmsis_dap_init(void)
 		}
 	}
 
+	if (1) {
 	retval = cmsis_dap_reset_link();
 	if (retval != ERROR_OK)
 		return ERROR_FAIL;
+	}
 
 	cmsis_dap_cmd_DAP_LED(0x00);				/* Both LEDs off */
 
