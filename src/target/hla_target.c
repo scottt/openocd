@@ -456,6 +456,9 @@ static int adapter_poll(struct target *target)
 	struct armv7m_common *armv7m = target_to_armv7m(target);
 	enum target_state prev_target_state = target->state;
 
+	if (!adapter) {
+		return ERROR_TARGET_FAILURE;
+	}
 	state = adapter->layout->api->state(adapter->handle);
 
 	if (state == TARGET_UNKNOWN) {
@@ -501,6 +504,10 @@ static int adapter_assert_reset(struct target *target)
 	enum reset_types jtag_reset_config = jtag_get_reset_config();
 
 	bool srst_asserted = false;
+
+	if (!adapter) {
+		return ERROR_TARGET_FAILURE;
+	}
 
 	if ((jtag_reset_config & RESET_HAS_SRST) &&
 	    (jtag_reset_config & RESET_SRST_NO_GATING)) {
@@ -765,6 +772,10 @@ static int adapter_read_memory(struct target *target, uint32_t address,
 
 	LOG_DEBUG("%s 0x%08" PRIx32 " %" PRIu32 " %" PRIu32, __func__, address, size, count);
 
+	if (!adapter) {
+		/* Could happen if the debug adapter is powered on but the target CPU isn't */
+		return ERROR_TARGET_FAILURE;
+	}
 	return adapter->layout->api->read_mem(adapter->handle, address, size, count, buffer);
 }
 
